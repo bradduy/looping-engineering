@@ -1,6 +1,6 @@
 # Loop Patterns
 
-A catalog of loop shapes that `onloop`'s contracts are meant to express. The
+A catalog of loop shapes that **OnLOOP**'s contracts are meant to express. The
 first, the **Ralph loop**, is the canonical reference implementation and the
 blueprint for the Phase 2 runtime. The rest are variations a runtime should be
 able to support by composing the same six contracts.
@@ -23,7 +23,7 @@ When context fills, the next agent reorients from those files and continues.
 
 ### File convention
 
-| File | Role | Changes per iteration? | `onloop` mapping |
+| File | Role | Changes per iteration? | OnLOOP mapping |
 |---|---|---|---|
 | `PROMPT.md` | The fixed task piped in every loop. The steering wheel. | **No, held constant** | `Goal` (`describe()` / the objective) |
 | `AGENTS.md` | Standing instructions + accumulated learnings (gotchas, conventions). Coding tools auto-read it. | **Yes, agent appends learnings** | Guide / feedforward (see "Guide write-back" below) |
@@ -55,13 +55,13 @@ PROMPT.md (Goal) ─▶ read progress.md (StateStore.load)
 
 Naive Ralph has **no required verifier and no required stop condition**. The
 `while :;` loop is literally infinite, and nothing forces the agent to check
-its own work before committing. That is exactly the failure mode `onloop`
+its own work before committing. That is exactly the failure mode **OnLOOP**
 forbids at the schema level:
 
 - `sensors` requires `minItems: 1` — the loop must be able to check itself.
 - `stop` requires `minItems: 1` — the loop must terminate.
 
-> Ralph is the loop with the brakes optional. `onloop` is the same loop with
+> Ralph is the loop with the brakes optional. **OnLOOP** is the same loop with
 > the brakes required.
 
 ---

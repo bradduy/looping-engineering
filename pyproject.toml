@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "onloop"
 version = "0.0.1"
-description = "A contracts-first framework for loop engineering: design the system that prompts the agent, not the prompt."
+description = "OnLOOP: a contracts-first framework for loop engineering. Design the system that prompts the agent, not the prompt."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

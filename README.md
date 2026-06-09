@@ -1,11 +1,11 @@
-# onloop — a framework for loop engineering
+# OnLOOP — a framework for loop engineering
 
 > Loop engineering is building a system that prompts your agent on a schedule
 > and against a goal, instead of typing each prompt yourself. The leverage moves
 > from the quality of a single prompt to the design of the system that generates
 > and verifies prompts.
 
-`onloop` makes that system concrete. `Agent = Model + Harness`; this framework
+**OnLOOP** makes that system concrete. `Agent = Model + Harness`; this framework
 owns the **loop** part of the harness. It defines six small interfaces for the
 parts of a loop so a runtime can drive any agent through the canonical cycle:
 
@@ -151,5 +151,5 @@ The term *loop engineering* was popularized by Addy Osmani (June 2026), building
 on Peter Steinberger and Anthropic's Boris Cherny ("write loops rather than
 prompt the model directly"). It is the sibling of *harness engineering*
 (Birgitta Böckeler, Thoughtworks): the harness is everything around the model;
-the loop is the cycle that drives it. `onloop` makes both the brakes (sensors,
+the loop is the cycle that drives it. **OnLOOP** makes both the brakes (sensors,
 stop conditions) mandatory — the gap the bare "Ralph loop" leaves open.

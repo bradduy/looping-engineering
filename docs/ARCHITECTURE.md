@@ -1,6 +1,6 @@
 # Architecture
 
-`onloop` is a **contracts-first** framework. The thesis of loop engineering is
+**OnLOOP** is a **contracts-first** framework. The thesis of loop engineering is
 that leverage lives in the *system that prompts the agent*, not in any single
 prompt. So the framework's primary artifact is a small set of interfaces that
 pin down what a loop is, leaving every concrete behavior pluggable.

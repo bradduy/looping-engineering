@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://loop-engineering/schema/loop.schema.json",
   "title": "Loop Spec",
-  "description": "Declarative definition of one loop-engineering loop. Each component names a Python implementation of a loopeng contract via a dotted import path ('uses') plus its config ('with'). A runtime loads this spec, instantiates the components, and drives find -> act -> verify -> remember -> repeat -> stop.",
+  "description": "Declarative definition of one loop-engineering loop. Each component names a Python implementation of a onloop contract via a dotted import path ('uses') plus its config ('with'). A runtime loads this spec, instantiates the components, and drives find -> act -> verify -> remember -> repeat -> stop.",
   "type": "object",
   "required": ["name", "goal", "work_source", "actor", "sensors", "stop"],
   "additionalProperties": false,
@@ -17,31 +17,31 @@
     },
     "goal": {
       "$ref": "#/$defs/component",
-      "description": "A loopeng.Goal implementation. Its is_satisfied() is the GOAL_MET stop condition."
+      "description": "A onloop.Goal implementation. Its is_satisfied() is the GOAL_MET stop condition."
     },
     "work_source": {
       "$ref": "#/$defs/component",
-      "description": "A loopeng.WorkSource implementation. find() discovers outstanding work items."
+      "description": "A onloop.WorkSource implementation. find() discovers outstanding work items."
     },
     "actor": {
       "$ref": "#/$defs/component",
-      "description": "A loopeng.Actor implementation. act() performs one work item."
+      "description": "A onloop.Actor implementation. act() performs one work item."
     },
     "sensors": {
       "type": "array",
-      "description": "One or more loopeng.Sensor implementations. ALL must pass for an action to count as progress.",
+      "description": "One or more onloop.Sensor implementations. ALL must pass for an action to count as progress.",
       "minItems": 1,
       "items": { "$ref": "#/$defs/component" }
     },
     "stop": {
       "type": "array",
-      "description": "One or more loopeng.StopCondition implementations. The loop stops on the first that fires. At least one bound is required; an unbounded loop is rejected.",
+      "description": "One or more onloop.StopCondition implementations. The loop stops on the first that fires. At least one bound is required; an unbounded loop is rejected.",
       "minItems": 1,
       "items": { "$ref": "#/$defs/component" }
     },
     "state_store": {
       "$ref": "#/$defs/component",
-      "description": "A loopeng.StateStore implementation. Defaults to a runtime-provided JSON file store under state/ if omitted."
+      "description": "A onloop.StateStore implementation. Defaults to a runtime-provided JSON file store under state/ if omitted."
     },
     "isolation": {
       "type": "string",

@@ -27,7 +27,7 @@ def load_spec(path: str) -> dict[str, Any]:
     try:
         import yaml  # lazy: only needed for the runtime, not the contracts
     except ImportError as e:  # pragma: no cover
-        raise SpecError("PyYAML is required to load specs: pip install 'loopeng[dev]'") from e
+        raise SpecError("PyYAML is required to load specs: pip install 'onloop[dev]'") from e
     with open(path) as f:
         spec = yaml.safe_load(f)
     _validate(spec)

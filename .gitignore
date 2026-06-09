@@ -217,7 +217,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# --- loopeng project-specific ---
+# --- onloop project-specific ---
 # Loop runtime state (a StateStore writes here; never commit run state)
 state/
 

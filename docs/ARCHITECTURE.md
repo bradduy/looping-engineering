@@ -1,6 +1,6 @@
 # Architecture
 
-`loopeng` is a **contracts-first** framework. The thesis of loop engineering is
+`onloop` is a **contracts-first** framework. The thesis of loop engineering is
 that leverage lives in the *system that prompts the agent*, not in any single
 prompt. So the framework's primary artifact is a small set of interfaces that
 pin down what a loop is, leaving every concrete behavior pluggable.
@@ -32,7 +32,7 @@ that wraps every iteration. A spec must declare at least one.
 ## Data flow
 
 All inter-contract data are the plain, JSON-serializable types in
-`loopeng/types.py`:
+`onloop/types.py`:
 
 - `WorkItem` — a unit of work with a stable `id` (so `done_ids` works across restarts).
 - `ActionResult` — what the `Actor` changed, plus `cost_tokens`.
@@ -78,15 +78,15 @@ guide layer are meant to behave at runtime.
 
 The runtime and its supporting cast now exist and are tested end to end:
 
-- **Runtime / executor** (`loopeng/runtime.py`) — `LoopRunner` drives
+- **Runtime / executor** (`onloop/runtime.py`) — `LoopRunner` drives
   find → act → verify → remember → stop, checking stop conditions at the top of
   every pass and counting progress only when all sensors pass.
-- **State store** (`loopeng/state.py`) — `JsonStateStore` persists `LoopState`
+- **State store** (`onloop/state.py`) — `JsonStateStore` persists `LoopState`
   atomically and appends an `IterationRecord` trace; loops resume from disk.
-- **Standard stop conditions** (`loopeng/stops.py`) — `GoalMet`,
+- **Standard stop conditions** (`onloop/stops.py`) — `GoalMet`,
   `MaxIterations`, `TokenBudget`, `LoopUntilDry`.
-- **Spec loader** (`loopeng/spec.py`) and **CLI** (`loopeng/cli.py`,
-  `loopeng run|resume`).
+- **Spec loader** (`onloop/spec.py`) and **CLI** (`onloop/cli.py`,
+  `onloop run|resume`).
 - **Reference loop + self-tests** — `examples/punchlist` (deterministic, no
   model) and `tests/test_runtime.py` exercise every stop reason plus resume.
 

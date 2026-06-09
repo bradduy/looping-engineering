@@ -38,11 +38,11 @@ sensors:
       command: "ruff check ."
 
 stop:
-  - uses: loopeng.stops.GoalMet        # StopReason.GOAL_MET
-  - uses: loopeng.stops.MaxIterations  # StopReason.MAX_ITERS
+  - uses: onloop.stops.GoalMet        # StopReason.GOAL_MET
+  - uses: onloop.stops.MaxIterations  # StopReason.MAX_ITERS
     with:
       max_iters: 25
-  - uses: loopeng.stops.LoopUntilDry   # StopReason.DRY
+  - uses: onloop.stops.LoopUntilDry   # StopReason.DRY
     with:
       empty_rounds: 2
 

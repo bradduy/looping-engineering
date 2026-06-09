@@ -1,7 +1,7 @@
-"""Command-line entry point: ``loopeng run|resume <spec>``.
+"""Command-line entry point: ``onloop run|resume <spec>``.
 
-    loopeng run    <spec.loop.yaml> [--workspace .]   # fresh start (clears state)
-    loopeng resume <spec.loop.yaml> [--workspace .]   # continue from saved state
+    onloop run    <spec.loop.yaml> [--workspace .]   # fresh start (clears state)
+    onloop resume <spec.loop.yaml> [--workspace .]   # continue from saved state
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def _run(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="loopeng", description="Run a loop-engineering loop.")
+    parser = argparse.ArgumentParser(prog="onloop", description="Run a loop-engineering loop.")
     sub = parser.add_subparsers(dest="command", required=True)
     for cmd, help_ in (("run", "fresh start"), ("resume", "continue from saved state")):
         p = sub.add_parser(cmd, help=help_)

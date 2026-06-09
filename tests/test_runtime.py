@@ -12,7 +12,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from loopeng import (  # noqa: E402
+from onloop import (  # noqa: E402
     Context,
     JsonStateStore,
     LoopRunner,
@@ -20,7 +20,7 @@ from loopeng import (  # noqa: E402
     WorkItem,
     WorkSource,
 )
-from loopeng.stops import GoalMet, LoopUntilDry, MaxIterations  # noqa: E402
+from onloop.stops import GoalMet, LoopUntilDry, MaxIterations  # noqa: E402
 from examples.punchlist.impl import (  # noqa: E402
     ItemIsDone,
     MarkDone,
@@ -109,7 +109,7 @@ def test_loop_until_dry():
 def test_failed_sensor_blocks_progress():
     class AlwaysFail(ItemIsDone):
         def verify(self, item, action, ctx):
-            from loopeng import SensorResult
+            from onloop import SensorResult
 
             return SensorResult(sensor="always_fail", passed=False, evidence="nope")
 

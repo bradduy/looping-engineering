@@ -1,6 +1,6 @@
 # Deterministic, no-LLM reference loop. Run it:
 #   pip install -e '.[dev]'
-#   PYTHONPATH=. python -m loopeng.cli run examples/punchlist/punchlist.loop.yaml
+#   PYTHONPATH=. python -m onloop.cli run examples/punchlist/punchlist.loop.yaml
 #
 # It seeds punchlist.json with three open items, marks each done (find -> act
 # -> verify -> remember), and stops with goal_met once all are done.
@@ -25,8 +25,8 @@ sensors:
     with: { path: punchlist.json }
 
 stop:
-  - uses: loopeng.stops.GoalMet
-  - uses: loopeng.stops.MaxIterations
+  - uses: onloop.stops.GoalMet
+  - uses: onloop.stops.MaxIterations
     with: { max_iters: 20 }
 
 budget:

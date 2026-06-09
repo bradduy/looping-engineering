@@ -1,10 +1,10 @@
-"""loopeng: a contracts-first framework for loop engineering.
+"""onloop: a contracts-first framework for loop engineering.
 
 Import the contracts to build a concrete loop, the runtime to run one:
 
-    from loopeng import Goal, WorkSource, Actor, Sensor, StateStore, StopCondition
-    from loopeng import WorkItem, ActionResult, SensorResult, Context
-    from loopeng import LoopRunner, JsonStateStore, load_spec, build_runner
+    from onloop import Goal, WorkSource, Actor, Sensor, StateStore, StopCondition
+    from onloop import WorkItem, ActionResult, SensorResult, Context
+    from onloop import LoopRunner, JsonStateStore, load_spec, build_runner
 
 A loop is the composition of one implementation of each contract, declared in a
 ``*.loop.yaml`` spec validated against ``schema/loop.schema.json``.

@@ -1,11 +1,11 @@
-# loopeng — a framework for loop engineering
+# onloop — a framework for loop engineering
 
 > Loop engineering is building a system that prompts your agent on a schedule
 > and against a goal, instead of typing each prompt yourself. The leverage moves
 > from the quality of a single prompt to the design of the system that generates
 > and verifies prompts.
 
-`loopeng` makes that system concrete. `Agent = Model + Harness`; this framework
+`onloop` makes that system concrete. `Agent = Model + Harness`; this framework
 owns the **loop** part of the harness. It defines six small interfaces for the
 parts of a loop so a runtime can drive any agent through the canonical cycle:
 
@@ -24,18 +24,18 @@ lives in the spec, not in new code.
 
 | | Component | Where |
 |---|---|---|
-| ✅ | Contracts + data types | `loopeng/contracts.py`, `loopeng/types.py` |
-| ✅ | Spec schema + loader | `schema/loop.schema.json`, `loopeng/spec.py` |
-| ✅ | Runtime (`LoopRunner`) | `loopeng/runtime.py` |
-| ✅ | Restartable JSON state store | `loopeng/state.py` |
-| ✅ | Standard stop conditions | `loopeng/stops.py` |
-| ✅ | CLI (`loopeng run\|resume`) | `loopeng/cli.py` |
+| ✅ | Contracts + data types | `onloop/contracts.py`, `onloop/types.py` |
+| ✅ | Spec schema + loader | `schema/loop.schema.json`, `onloop/spec.py` |
+| ✅ | Runtime (`LoopRunner`) | `onloop/runtime.py` |
+| ✅ | Restartable JSON state store | `onloop/state.py` |
+| ✅ | Standard stop conditions | `onloop/stops.py` |
+| ✅ | CLI (`onloop run\|resume`) | `onloop/cli.py` |
 | ✅ | Reference loop + tests | `examples/punchlist`, `tests/` |
 | ⬜ | Real-agent impls, isolation, safety, guide write-back | see [Roadmap](#roadmap) |
 
 ## The six contracts
 
-A loop is one implementation of each (in `loopeng/contracts.py`):
+A loop is one implementation of each (in `onloop/contracts.py`):
 
 | Contract | Stage | Question it answers |
 |---|---|---|
@@ -56,13 +56,13 @@ loop must declare at least one **sensor** (it can check itself) and at least one
 pip install -e '.[dev]'
 
 # run the deterministic reference loop (no API key needed)
-PYTHONPATH=. loopeng run examples/punchlist/punchlist.loop.yaml --workspace /tmp/demo
+PYTHONPATH=. onloop run examples/punchlist/punchlist.loop.yaml --workspace /tmp/demo
 #   loop:        punchlist
 #   stopped:     goal_met
 #   iterations:  3
 #   done items:  3 ['inspect', 'paint', 'wire']
 
-PYTHONPATH=. loopeng resume examples/punchlist/punchlist.loop.yaml --workspace /tmp/demo
+PYTHONPATH=. onloop resume examples/punchlist/punchlist.loop.yaml --workspace /tmp/demo
 python tests/test_runtime.py        # or: pytest -q
 ```
 
@@ -83,8 +83,8 @@ actor:       { uses: examples.punchlist.impl.MarkDone }
 sensors:
   - { uses: examples.punchlist.impl.ItemIsDone }
 stop:
-  - { uses: loopeng.stops.GoalMet }
-  - { uses: loopeng.stops.MaxIterations, with: { max_iters: 20 } }
+  - { uses: onloop.stops.GoalMet }
+  - { uses: onloop.stops.MaxIterations, with: { max_iters: 20 } }
 budget:
   max_iters: 20      # expanded into an implicit stop condition
 ```
@@ -95,9 +95,9 @@ See also the LLM-shaped (not yet runnable) target spec:
 ## Or build one in Python
 
 ```python
-from loopeng import (Goal, WorkSource, Actor, Sensor, WorkItem, ActionResult,
+from onloop import (Goal, WorkSource, Actor, Sensor, WorkItem, ActionResult,
                      SensorResult, Context, LoopRunner, JsonStateStore)
-from loopeng.stops import GoalMet, MaxIterations
+from onloop.stops import GoalMet, MaxIterations
 
 # implement the contracts for your domain ... then:
 runner = LoopRunner(
@@ -113,14 +113,14 @@ print(result.stop_reason, result.done)
 ## Project layout
 
 ```
-loopeng/                 the framework
+onloop/                 the framework
   contracts.py           the six interfaces (ABCs)
   types.py               serializable data types (WorkItem, LoopState, ...)
   runtime.py             LoopRunner — drives find→act→verify→remember→stop
   state.py               JsonStateStore — atomic, restartable persistence
   stops.py               GoalMet, MaxIterations, TokenBudget, LoopUntilDry
   spec.py                load + validate *.loop.yaml, build a runner
-  cli.py                 `loopeng run|resume`
+  cli.py                 `onloop run|resume`
 schema/                  loop.schema.json + an aspirational example spec
 examples/punchlist/      deterministic, no-LLM reference loop
 tests/                   end-to-end runtime tests (every stop reason + resume)
@@ -151,5 +151,5 @@ The term *loop engineering* was popularized by Addy Osmani (June 2026), building
 on Peter Steinberger and Anthropic's Boris Cherny ("write loops rather than
 prompt the model directly"). It is the sibling of *harness engineering*
 (Birgitta Böckeler, Thoughtworks): the harness is everything around the model;
-the loop is the cycle that drives it. `loopeng` makes both the brakes (sensors,
+the loop is the cycle that drives it. `onloop` makes both the brakes (sensors,
 stop conditions) mandatory — the gap the bare "Ralph loop" leaves open.

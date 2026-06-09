@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loop-engineering/schema/loop.schema.json",
+  "title": "Loop Spec",
+  "description": "Declarative definition of one loop-engineering loop. Each component names a Python implementation of a loopeng contract via a dotted import path ('uses') plus its config ('with'). A runtime loads this spec, instantiates the components, and drives find -> act -> verify -> remember -> repeat -> stop.",
+  "type": "object",
+  "required": ["name", "goal", "work_source", "actor", "sensors", "stop"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Stable identifier for this loop; used as the goal_id in state.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "goal": {
+      "$ref": "#/$defs/component",
+      "description": "A loopeng.Goal implementation. Its is_satisfied() is the GOAL_MET stop condition."
+    },
+    "work_source": {
+      "$ref": "#/$defs/component",
+      "description": "A loopeng.WorkSource implementation. find() discovers outstanding work items."
+    },
+    "actor": {
+      "$ref": "#/$defs/component",
+      "description": "A loopeng.Actor implementation. act() performs one work item."
+    },
+    "sensors": {
+      "type": "array",
+      "description": "One or more loopeng.Sensor implementations. ALL must pass for an action to count as progress.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "stop": {
+      "type": "array",
+      "description": "One or more loopeng.StopCondition implementations. The loop stops on the first that fires. At least one bound is required; an unbounded loop is rejected.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "state_store": {
+      "$ref": "#/$defs/component",
+      "description": "A loopeng.StateStore implementation. Defaults to a runtime-provided JSON file store under state/ if omitted."
+    },
+    "isolation": {
+      "type": "string",
+      "description": "How parallel work units are isolated from each other.",
+      "enum": ["none", "worktree", "sandbox"],
+      "default": "none"
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Hard ceilings. Reaching one stops the loop with the matching StopReason.",
+      "properties": {
+        "max_iters": { "type": "integer", "minimum": 1 },
+        "max_tokens": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["uses"],
+      "additionalProperties": false,
+      "properties": {
+        "uses": {
+          "type": "string",
+          "description": "Dotted import path to the implementing class, e.g. 'myloops.sensors.PytestSensor'.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.]*[A-Za-z0-9_]$"
+        },
+        "with": {
+          "type": "object",
+          "description": "Keyword arguments passed to the implementation's constructor.",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

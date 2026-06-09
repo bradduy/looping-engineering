@@ -1,0 +1,53 @@
+# Reference loop spec: drive a test suite to green.
+#
+# Reads top to bottom as the canonical loop:
+#   GOAL "no failing tests" -> find failing tests -> fix one -> re-run tests
+#   (sensor) -> remember -> repeat -> stop when green / out of budget.
+#
+# NOTE: the `uses:` paths below are illustrative. The implementations they
+# point at are NOT part of this repo yet (this phase ships contracts + docs
+# only). They show how a real loop binds concrete classes to each contract.
+
+name: make-tests-green
+description: Iterate until the test suite passes or the budget is exhausted.
+
+goal:
+  uses: myloops.goals.AllTestsPass
+  with:
+    command: "pytest -q"
+
+work_source:
+  # Emits one WorkItem per failing test, skipping anything in done_ids.
+  uses: myloops.sources.FailingTests
+  with:
+    command: "pytest -q --tb=no"
+
+actor:
+  # Attempts the smallest fix for a single failing test.
+  uses: myloops.actors.FixFailingTest
+  with:
+    model: claude-opus-4-8
+
+sensors:
+  # ALL must pass for the fix to count as progress.
+  - uses: myloops.sensors.PytestSensor
+    with:
+      command: "pytest -q"
+  - uses: myloops.sensors.RuffSensor
+    with:
+      command: "ruff check ."
+
+stop:
+  - uses: loopeng.stops.GoalMet        # StopReason.GOAL_MET
+  - uses: loopeng.stops.MaxIterations  # StopReason.MAX_ITERS
+    with:
+      max_iters: 25
+  - uses: loopeng.stops.LoopUntilDry   # StopReason.DRY
+    with:
+      empty_rounds: 2
+
+isolation: worktree
+
+budget:
+  max_iters: 25
+  max_tokens: 400000

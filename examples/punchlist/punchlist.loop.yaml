@@ -1,0 +1,33 @@
+# Deterministic, no-LLM reference loop. Run it:
+#   pip install -e '.[dev]'
+#   PYTHONPATH=. python -m loopeng.cli run examples/punchlist/punchlist.loop.yaml
+#
+# It seeds punchlist.json with three open items, marks each done (find -> act
+# -> verify -> remember), and stops with goal_met once all are done.
+
+name: punchlist
+description: Mark every punch-list item done (deterministic demo, no model).
+
+goal:
+  uses: examples.punchlist.impl.PunchlistClear
+  with: { path: punchlist.json, seed: [wire, paint, inspect] }
+
+work_source:
+  uses: examples.punchlist.impl.OpenItems
+  with: { path: punchlist.json, seed: [wire, paint, inspect] }
+
+actor:
+  uses: examples.punchlist.impl.MarkDone
+  with: { path: punchlist.json }
+
+sensors:
+  - uses: examples.punchlist.impl.ItemIsDone
+    with: { path: punchlist.json }
+
+stop:
+  - uses: loopeng.stops.GoalMet
+  - uses: loopeng.stops.MaxIterations
+    with: { max_iters: 20 }
+
+budget:
+  max_iters: 20

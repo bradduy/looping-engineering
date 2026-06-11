@@ -273,11 +273,57 @@ In the model of §4, the bare Ralph loop is the instance with `S = ∅` and `T =
 
 ### 7.4 Empirical sanity check
 
-A deterministic, model-free reference loop (clearing a punch list of work items on disk) exercises every component and each stop reason. Its end-to-end test suite confirms: convergence to `goal_met` with verified progress, correct bounding by `max_iters` before goal, `loop_until_dry` termination on an empty work source, that a permanently failing sensor blocks an item from the done-set (a direct test of `P1`), and that state round-trips across a simulated restart (a test of R4). All cases pass. Because the actor is deterministic, the suite isolates the *control structure* from model stochasticity, which is the property under test. We make no claim about model-in-the-loop performance; that is future work (§9).
+A deterministic, model-free reference loop (clearing a punch list of work items on disk) exercises every component and each stop reason. Its end-to-end test suite confirms: convergence to `goal_met` with verified progress, correct bounding by `max_iters` before goal, `loop_until_dry` termination on an empty work source, that a permanently failing sensor blocks an item from the done-set (a direct test of `P1`), and that state round-trips across a simulated restart (a test of R4). All cases pass. Because the actor is deterministic, the suite isolates the *control structure* from model stochasticity, which is the property under test. We make no claim about model-in-the-loop performance; that is future work (§10).
 
 ---
 
-## 8. Discussion
+## 8. Integrating a Loop into a Task
+
+Loop engineering is applied by answering six questions about a task, one per contract, and binding each answer to an implementation.
+
+### 8.1 Recipe: from a task to a loop
+
+1. **State the goal `G` as a check, not a wish.** Name the command or predicate true exactly when the task is done (`pytest` exits 0; no `TODO` markers remain). If you cannot write the check, the task is not yet loop-ready.
+2. **Define the work source `W`.** Decide how an iteration discovers the next unit (parse failing tests, scan open items, pull a queue), skipping anything already in the done-set.
+3. **Implement the actor `A`.** The smallest step that advances one unit: usually a single model call with a focused prompt, or a deterministic edit. Keep it small so a bad step is cheap to discard.
+4. **Wire the sensor(s) `S` *before* the actor.** At least one verifier with evidence; prefer a fast computational sensor (tests, linter), add an inferential one (a review agent) only where semantics matter.
+5. **Choose the state store `M_s`.** The default JSON store suffices; pick a *stable* done-key per work item so resumption never redoes work.
+6. **Set stop conditions `T`.** Always `GoalMet` plus a real bound (`MaxIterations`, a token budget, or `LoopUntilDry`); never ship a loop without one.
+
+Steps 1, 4, and 6 are non-negotiable: they establish the preconditions of P1 and P2. Isolation and budget are optional policy layered on top.
+
+### 8.2 Worked example: drive a test suite to green
+
+The bindings become a declarative spec (abbreviated):
+
+```yaml
+name: make-tests-green
+goal:        { uses: myloops.AllTestsPass, with: { cmd: "pytest -q" } }
+work_source: { uses: myloops.FailingTests }
+actor:       { uses: myloops.FixOneTest,   with: { model: <llm> } }
+sensors:
+  - { uses: myloops.PytestSensor }
+  - { uses: myloops.RuffSensor }            # second check
+stop:
+  - { uses: onloop.stops.GoalMet }
+  - { uses: onloop.stops.MaxIterations, with: { max_iters: 25 } }
+budget:    { max_tokens: 400000 }
+isolation: worktree
+```
+
+A runtime loads the spec and executes the transition rule of §4.3: each pass finds one failing test, the actor proposes a fix, *both* sensors must pass for it to count as done, and the run halts at `goal_met`, the iteration cap, or the token budget. Because state is persisted every pass, an interrupted run resumes where it stopped (`onloop resume`).
+
+### 8.3 Where a loop plugs in
+
+The same loop integrates into different surfaces by changing only *when* it runs and *what bounds* it: a **scheduled** job (run nightly until `dry`); a **pre-merge gate** (run once; fail the build unless `goal_met`); a **batch migration** (one work item per file, with `isolation: worktree` so parallel actors do not collide); or a **supervised** run (a human-on-the-loop checkpoint every `k` iterations). The contract bindings are unchanged; only `T` and the trigger differ.
+
+### 8.4 Pitfalls
+
+The recurring failures each violate a precondition of P1 or P2: an unverifiable goal (no check); the actor running before any sensor exists (fast, unchecked mistakes); unstable done-keys (work repeats on resume); and a missing real bound (an effectively infinite loop). The schema-level obligations of §7 catch the last two at load time.
+
+---
+
+## 9. Discussion
 
 ### 8.1 A unifying picture
 
@@ -303,7 +349,7 @@ Conflating the two leads to two characteristic mistakes. Treating loop engineeri
 
 ---
 
-## 9. Limitations and Threats to Validity
+## 10. Limitations and Threats to Validity
 
 - **Construct validity.** Both terms are recent (2026) and not yet standardized; our definitions follow the originating sources but the community usage is still in flux.
 - **Single implementation.** Our empirical grounding is one reference framework (OnLOOP) with a deterministic actor. We demonstrate that the invariants are *enforceable* and that the control structure is *correct*, not that loops with real LLM actors converge efficiently on real software tasks.
@@ -312,7 +358,7 @@ Conflating the two leads to two characteristic mistakes. Treating loop engineeri
 
 ---
 
-## 10. Conclusion and Future Work
+## 11. Conclusion and Future Work
 
 Loop engineering and harness engineering are not competing schools; they are a part and a whole. The harness is the spatial scaffolding around a model; the loop is the temporal control structure that is one component of that scaffolding. Loop engineering's distinctive contribution is to make *verification* and *termination* first-class, and the most useful engineering consequence is to enforce them as type-level obligations, as OnLOOP does, rather than as discretionary good practice. The bare Ralph loop is precisely the degenerate case that omits both.
 

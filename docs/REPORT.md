@@ -167,13 +167,29 @@ where **Guides** are feedforward controls applied before generation and **Sensor
 The harness has an I/O contract too, but a per-*step* one. Treating a single agent step as a function:
 
 ```
-step : M × Ctx → (a, v)
+step : M × Ctx → (a, v, Δμ, tr)
 ```
 
-- **Input** is the model `M` together with the *context* `Ctx` the harness assembles for this step: the relevant guides (feedforward), the available tools, retrieved memory, and the current task.
-- **Output** is a single action `a` (an edit or tool call) paired with the sensor verdict `v` on it (feedback).
+where the harness both *assembles* the input context `Ctx` (feedforward) and *checks* the resulting action (feedback).
 
-Harness engineering is precisely the design of what enters `Ctx` and which sensors produce `v`; it transforms raw model capability into a reliable, *checked* step. The relationship to the loop is exact: the loop's per-run signature (`run`, Sec. 4.2) is the closure of `step` iterated under the control flow of `T`. Where harness I/O asks "is this one step good?", loop I/O asks "is the whole goal met, and when do we stop?".
+**Input: the model `M` and the context `Ctx`.** The model supplies capability; `Ctx` is everything the harness packs into the window for this step:
+
+- **Task** — the current instruction or subtask.
+- **Guides** (feedforward) — conventions, architectural rules, templates, linter configuration: constraints applied *before* generation.
+- **Tools** — the action interface available this step (edits, shell, search, MCP servers).
+- **Memory** — retrieved relevant state: prior decisions, accumulated learnings (`AGENTS.md`), code excerpts.
+- **Sandbox** — the execution environment and its permissions.
+
+Assembling this within the context window is itself the engineering work ("context engineering").
+
+**Output: a checked step `(a, v, Δμ, tr)`.**
+
+- `a` — a single action (edit, tool call, message), possibly blocked or rewritten by a guardrail before it takes effect.
+- `v` — the sensor verdict on `a`, *with evidence*: a conjunction of **computational** sensors (deterministic, fast: linters, tests, type-checkers) and **inferential** sensors (semantic, slower: review agents, LLM judges).
+- `Δμ` — side effects: the mutated workspace if `a` is applied, and any learnings written back to memory.
+- `tr` — telemetry for observability (the step's cost, decision, and verdict).
+
+Harness engineering is precisely the design of *what enters `Ctx`* (feedforward) and *which sensors produce `v`* (feedback); it turns raw model capability into a reliable, *checked* step. The relationship to the loop is exact: the loop's per-run signature (`run`, Sec. 4.2) is the closure of `step` iterated under the control flow of `T`, threading each `Δμ` into the next step's `Ctx` and aggregating each `v` into verified progress. Where harness I/O asks "is this one step good?", loop I/O asks "is the whole goal met, and when do we stop?".
 
 ### 5.3 The loop is a subcomponent of the harness
 

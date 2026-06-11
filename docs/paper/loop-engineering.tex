@@ -325,23 +325,79 @@ automated guide-writer) updates $\mathit{Guides}$ and $\mathit{Sensors}$ in
 response to recurring failures.
 
 \subsection{Inputs and outputs}
+\label{sec:harness-io}
 The harness has an I/O contract too, but a per-\emph{step} one. Treating a single
 agent step as a function,
 \[
-\texttt{step}:\; M \times \mathit{Ctx} \;\to\; (a,\, v),
+\texttt{step}:\; M \times \mathit{Ctx} \;\to\; (a,\, v,\, \Delta\mu,\, \mathrm{tr}),
 \]
-its \textbf{input} is the model $M$ together with the \emph{context}
-$\mathit{Ctx}$ the harness assembles for this step---the relevant guides
-(feedforward), the available tools, retrieved memory, and the current task. Its
-\textbf{output} is a single action $a$ (an edit or tool call) paired with the
-sensor verdict $v$ on it (feedback). Harness engineering is precisely the design
-of what enters $\mathit{Ctx}$ and which sensors produce $v$; it transforms raw
-model capability into a reliable, \emph{checked} step. The relationship to the
-loop is exact: the loop's per-run signature
-($\texttt{run}$, Sec.~\ref{sec:loop}, Fig.~\ref{fig:io}) is the closure of
-$\texttt{step}$ iterated under the control flow of $T$. Where harness I/O asks
-``is this one step good?'', loop I/O asks ``is the whole goal met, and when do
-we stop?''.
+where the harness both \emph{assembles} the input context $\mathit{Ctx}$
+(feedforward) and \emph{checks} the resulting action (feedback);
+Fig.~\ref{fig:hio} expands it.
+
+\noindent\textbf{Input: the model $M$ and the context $\mathit{Ctx}$.} The model
+supplies capability; $\mathit{Ctx}$ is everything the harness packs into the
+window for this step:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt,parsep=0pt]
+\item \emph{Task} --- the current instruction or subtask.
+\item \emph{Guides} (feedforward) --- conventions, architectural rules,
+templates, linter configuration: constraints applied \emph{before} generation.
+\item \emph{Tools} --- the action interface available this step (edits, shell,
+search, MCP servers).
+\item \emph{Memory} --- retrieved relevant state: prior decisions, accumulated
+learnings (\texttt{AGENTS.md}), code excerpts.
+\item \emph{Sandbox} --- the execution environment and its permissions.
+\end{itemize}
+Assembling this within the context window is itself the engineering work
+(``context engineering'').
+
+\noindent\textbf{Output: a checked step $(a, v, \Delta\mu, \mathrm{tr})$.}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt,parsep=0pt]
+\item $a$ --- a single action (edit, tool call, message), possibly blocked or
+rewritten by a guardrail before it takes effect.
+\item $v$ --- the sensor verdict on $a$, \emph{with evidence}: a conjunction of
+\emph{computational} sensors (deterministic, fast: linters, tests,
+type-checkers) and \emph{inferential} sensors (semantic, slower: review agents,
+LLM judges).
+\item $\Delta\mu$ --- side effects: the mutated workspace if $a$ is applied, and
+any learnings written back to memory.
+\item $\mathrm{tr}$ --- telemetry for observability (the step's cost, decision,
+and verdict).
+\end{itemize}
+
+Harness engineering is precisely the design of \emph{what enters $\mathit{Ctx}$}
+(feedforward) and \emph{which sensors produce $v$} (feedback); it turns raw model
+capability into a reliable, \emph{checked} step. The relationship to the loop is
+exact: the loop's per-run signature ($\texttt{run}$, Sec.~\ref{sec:loop},
+Fig.~\ref{fig:io}) is the closure of $\texttt{step}$ iterated under the control
+flow of $T$, threading each $\Delta\mu$ into the next step's $\mathit{Ctx}$ and
+aggregating each $v$ into verified progress. Where harness I/O asks ``is this one
+step good?'', loop I/O asks ``is the whole goal met, and when do we stop?''.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\footnotesize, >=Latex, node distance=5mm,
+  io/.style={draw, rounded corners, align=left, text width=0.86\columnwidth, inner sep=4pt},
+  stepn/.style={draw, very thick, draw=blue!55!black, rounded corners, fill=blue!8, align=center, text width=0.86\columnwidth, inner sep=4pt}]
+\node[io, fill=blue!5] (in) {\textbf{Input: model $+$ assembled context $\mathit{Ctx}$}\\[1pt]
+model $M$ $\cdot$ task $\cdot$ guides (feedforward) $\cdot$ tools $\cdot$
+memory $\cdot$ sandbox};
+\node[stepn, below=of in] (step) {\textbf{Harness} \texttt{step}\\[1pt]
+assemble $\mathit{Ctx}$ $\to$ invoke $M$ $\to$ run sensors
+(computational $+$ inferential) $\to$ guard};
+\node[io, fill=orange!8, below=of step] (out) {\textbf{Output: one checked step}\\[1pt]
+action $a$ (gated) $\cdot$ verdict $v$ $+$ evidence $\cdot$ memory update
+$\Delta\mu$ $\cdot$ telemetry $\mathrm{tr}$};
+\draw[->,thick] (in) -- (step);
+\draw[->,thick] (step) -- (out);
+\end{tikzpicture}
+\caption{Inputs and outputs of a harness \emph{step} (cf.\ the loop's per-run
+I/O, Fig.~\ref{fig:io}). Harness engineering designs the feedforward (what fills
+$\mathit{Ctx}$) and the feedback (which sensors yield $v$), turning model
+capability into one reliable, checked action. A loop iterates this step until
+$T$ fires.}
+\label{fig:hio}
+\end{figure}
 
 \subsection{The loop is a subcomponent of the harness}
 \noindent\textbf{Proposition.} $L \subsetneq H$.

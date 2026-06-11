@@ -223,3 +223,13 @@ state/
 
 # OS
 .DS_Store
+
+# --- LaTeX build artifacts ---
+*.aux
+*.fls
+*.fdb_latexmk
+*.out
+*.toc
+*.synctex.gz
+*.bbl
+*.blg

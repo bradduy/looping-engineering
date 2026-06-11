@@ -500,76 +500,90 @@ under test. We make no claim about model-in-the-loop performance; that is future
 work.
 
 % =============================== 8. INTEGRATION ==========================
-\section{Integrating a Loop into a Task}
+\section{Putting a Loop to Work (Practitioner's Guide)}
 \label{sec:integrate}
-Loop engineering is applied by answering six questions about a task---one per
-contract---and binding each answer to an implementation. We give the recipe,
-then a worked example and the surfaces it plugs into.
+You do not need the formalism above to use a loop. In practice you answer six
+plain questions about your task, write the answers in a short spec file, and let
+the runtime drive the agent. This section is hands-on: a recipe in everyday
+terms, an example you can run today, a table to map your own task, and the
+mistakes to avoid.
 
-\subsection{Recipe: from a task to a loop}
-\begin{enumerate}[leftmargin=1.5em,itemsep=2pt,topsep=2pt,parsep=0pt]
-\item \textbf{State the goal $G$ as a check, not a wish.} Name the command or
-predicate true exactly when the task is done (``\texttt{pytest} exits $0$'', ``no
-\texttt{TODO} markers remain''). If you cannot write the check, the task is not
-yet loop-ready.
-\item \textbf{Define the work source $W$.} Decide how an iteration discovers the
-next unit (parse failing tests, scan open items, pull a queue), skipping
-anything already in the done-set.
-\item \textbf{Implement the actor $A$.} The smallest step that advances one
-unit---usually a single model call with a focused prompt, or a deterministic
-edit. Keep it small so a bad step is cheap to discard.
-\item \textbf{Wire the sensor(s) $S$ \emph{before} the actor.} At least one
-verifier with evidence; prefer a fast computational sensor (tests, linter), add
-an inferential one (a review agent) only where semantics matter.
-\item \textbf{Choose the state store $M_s$.} The default JSON store suffices;
-pick a \emph{stable} done-key per work item so resumption never redoes work.
-\item \textbf{Set stop conditions $T$.} Always \texttt{GoalMet} plus a real bound
-(\texttt{MaxIterations}, a token budget, or \texttt{LoopUntilDry}); never ship a
-loop without one.
+\subsection{The six questions}
+Each maps to one part of a loop (named in parentheses); you can ignore the
+symbols and just answer the question.
+\begin{enumerate}[leftmargin=1.5em,itemsep=2.5pt,topsep=2pt,parsep=0pt]
+\item \textbf{When is it done?} (goal) Give a command that succeeds or a check
+that comes back clean---``\texttt{pytest} passes,'' ``the linter reports zero
+issues.'' If you cannot state the check, the task is not ready for a loop yet.
+\item \textbf{What are the pieces of work?} (work source) Say how to list what
+still needs doing---e.g.\ the currently failing tests, or the files not yet
+migrated. Finished pieces are skipped automatically.
+\item \textbf{How do you do one piece?} (actor) Usually: ask the model to fix
+\emph{one} thing with a focused prompt. Handle a single piece per step so a bad
+attempt is cheap to throw away.
+\item \textbf{How do you check a piece really worked?} (sensor) A test or linter
+that returns a clear pass/fail with output. \emph{Set this up before the actor}:
+without a check, the loop just makes mistakes faster. You may use several.
+\item \textbf{How is progress remembered?} (state) Use the built-in file store;
+just give each piece a stable name so a restart picks up where it left off
+instead of redoing work.
+\item \textbf{When should it stop?} (stop rule) When the goal is met, after $N$
+attempts, or at a token budget---whichever comes first. Always set at least one;
+a loop with no stop rule runs forever.
 \end{enumerate}
-Steps 1, 4, and 6 are the non-negotiable ones: they establish the preconditions
-of P1 and P2. Isolation and budget are optional policy layered on top.
+Questions 1, 4, and 6 are the ones you must not skip: a checkable goal, a
+verifier wired before the actor, and a real stop limit.
 
-\subsection{Worked example: drive a test suite to green}
-The bindings above become a declarative spec (abbreviated):
+\subsection{Run one in two minutes}
+A self-contained example ships with the framework and needs no API key---it
+marks a list of items done, checking each on disk. Try it:
+\begin{lstlisting}[language=bash]
+pip install -e '.[dev]'
+onloop run examples/punchlist/punchlist.loop.yaml \
+           --workspace /tmp/demo
+# stopped: goal_met   iterations: 3
+# done: ['inspect', 'paint', 'wire']
+onloop resume ...   # continues from saved progress
+\end{lstlisting}
+For a real coding task you swap in your own pieces. The same spec for ``drive a
+failing test suite to green'' looks like this---each line names the code that
+answers one of the six questions:
 \begin{lstlisting}
 name: make-tests-green
 goal:        { uses: myloops.AllTestsPass,
-               with: { cmd: "pytest -q" } }
-work_source: { uses: myloops.FailingTests }
+               with: { cmd: "pytest -q" } }   # done?
+work_source: { uses: myloops.FailingTests }   # pieces
 actor:       { uses: myloops.FixOneTest,
-               with: { model: <llm> } }
+               with: { model: <llm> } }       # do one
 sensors:
-  - { uses: myloops.PytestSensor }
-  - { uses: myloops.RuffSensor }   # 2nd check
+  - { uses: myloops.PytestSensor }            # check
 stop:
   - { uses: onloop.stops.GoalMet }
   - { uses: onloop.stops.MaxIterations,
-      with: { max_iters: 25 } }
-budget:    { max_tokens: 400000 }
-isolation: worktree
+      with: { max_iters: 25 } }               # limit
+budget: { max_tokens: 400000 }
 \end{lstlisting}
-A runtime loads the spec and executes the rule of Fig.~\ref{fig:rule}: each pass
-finds one failing test, the actor proposes a fix, \emph{both} sensors must pass
-for it to count as done, and the run halts at \texttt{goal\_met}, the iteration
-cap, or the token budget. Because state is persisted every pass, an interrupted
-run resumes where it stopped (\texttt{onloop resume}).
+\texttt{onloop run} then repeats: find one failing test, let the model fix it,
+re-run the test, and record it---stopping at green, 25 tries, or the budget. If
+it is interrupted, \texttt{onloop resume} continues.
 
-\subsection{Where a loop plugs in}
-The same loop integrates into different surfaces by changing only \emph{when} it
-runs and \emph{what bounds} it: a \emph{scheduled} job (run nightly until
-\texttt{dry}); a \emph{pre-merge gate} (run once; fail the build unless
-\texttt{goal\_met}); a \emph{batch migration} (one work item per file, with
-\texttt{isolation: worktree} so parallel actors do not collide); or a
-\emph{supervised} run (a human-on-the-loop checkpoint every $k$ iterations). The
-contract bindings are unchanged; only $T$ and the trigger differ.
+\subsection{Map your own task}
+Most jobs fit the same shape; you only change three answers (Table~\ref{tab:map}).
 
-\subsection{Pitfalls}
-The recurring failures each violate a precondition of P1 or P2: an unverifiable
-goal (no check); the actor running before any sensor exists (fast, unchecked
-mistakes); unstable done-keys (work repeats on resume); and a missing real bound
-(an effectively infinite loop). The schema-level obligations of
-Sec.~\ref{sec:onloop} catch the last two at load time.
+\subsection{Where it runs}
+The \emph{same} loop fits different places by changing only when it runs and its
+limit: a nightly job that runs until nothing new is found; a pull-request check
+that runs once and blocks the merge unless the goal is met; a one-off bulk
+migration (one file per piece, run in isolated copies so parallel fixes do not
+clash); or a supervised run that pauses for a human to approve every few steps.
+
+\subsection{Common mistakes}
+Four mistakes account for most trouble: (i) no way to check ``done'' (the loop
+cannot tell when to stop or whether a fix worked); (ii) letting the model act
+before a check exists (fast, unverified changes); (iii) not giving each piece a
+stable name (it gets redone after a restart); and (iv) forgetting a stop limit
+(it never ends). The framework refuses to run a spec that has no check or no
+stop limit, so mistakes (i), partly, and (iv) are caught before the loop starts.
 
 % =============================== 9. DISCUSSION ===========================
 \section{Discussion}
@@ -672,6 +686,27 @@ Verification stance & Verification is a stage of the cycle ($S$)           & Ver
 Termination         & First-class concern ($T$); core to the discipline    & Implicit; not central \\
 Lifecycle / ownership & Often automated, scheduled, recursive              & Iteratively improved by a human meta-loop \\
 Canonical artifact  & A loop spec; the executor                            & Guides + sensors + tools + sandboxes \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table*}[t]
+\centering
+\caption{Mapping everyday tasks onto a loop. You change only three answers---what
+``done'' means, what one piece of work is, and how to check it; the rest of the
+machinery (do one piece, remember, stop) stays the same.}
+\label{tab:map}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}>{\bfseries}p{0.20\textwidth} p{0.24\textwidth} p{0.22\textwidth} p{0.26\textwidth}@{}}
+\toprule
+Your task & Done when (goal) & One piece of work & Check that it worked (sensor) \\
+\midrule
+Make tests pass    & the test suite passes            & a currently failing test   & re-run that test \\
+Fix lint / format  & the linter reports zero issues   & a file with warnings       & re-run the linter on that file \\
+Close all TODOs     & no \texttt{TODO} comments remain & one \texttt{TODO} comment  & the TODO is gone and tests still pass \\
+Migrate config files & every file is in the new format & one old-format file       & validate the result against the new schema \\
+Upgrade a deprecated API & no calls to the old API remain & one call site          & the project still compiles and tests pass \\
 \bottomrule
 \end{tabular}
 \end{table*}

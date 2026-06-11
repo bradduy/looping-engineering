@@ -277,49 +277,70 @@ A deterministic, model-free reference loop (clearing a punch list of work items 
 
 ---
 
-## 8. Integrating a Loop into a Task
+## 8. Putting a Loop to Work (Practitioner's Guide)
 
-Loop engineering is applied by answering six questions about a task, one per contract, and binding each answer to an implementation.
+You do not need the formalism above to use a loop. In practice you answer six plain questions about your task, write the answers in a short spec file, and let the runtime drive the agent. This section is hands-on: a recipe in everyday terms, an example you can run today, a table to map your own task, and the mistakes to avoid.
 
-### 8.1 Recipe: from a task to a loop
+### 8.1 The six questions
 
-1. **State the goal `G` as a check, not a wish.** Name the command or predicate true exactly when the task is done (`pytest` exits 0; no `TODO` markers remain). If you cannot write the check, the task is not yet loop-ready.
-2. **Define the work source `W`.** Decide how an iteration discovers the next unit (parse failing tests, scan open items, pull a queue), skipping anything already in the done-set.
-3. **Implement the actor `A`.** The smallest step that advances one unit: usually a single model call with a focused prompt, or a deterministic edit. Keep it small so a bad step is cheap to discard.
-4. **Wire the sensor(s) `S` *before* the actor.** At least one verifier with evidence; prefer a fast computational sensor (tests, linter), add an inferential one (a review agent) only where semantics matter.
-5. **Choose the state store `M_s`.** The default JSON store suffices; pick a *stable* done-key per work item so resumption never redoes work.
-6. **Set stop conditions `T`.** Always `GoalMet` plus a real bound (`MaxIterations`, a token budget, or `LoopUntilDry`); never ship a loop without one.
+Each maps to one part of a loop (named in parentheses); you can ignore the symbols and just answer the question.
 
-Steps 1, 4, and 6 are non-negotiable: they establish the preconditions of P1 and P2. Isolation and budget are optional policy layered on top.
+1. **When is it done?** *(goal)* Give a command that succeeds or a check that comes back clean: "`pytest` passes," "the linter reports zero issues." If you cannot state the check, the task is not ready for a loop yet.
+2. **What are the pieces of work?** *(work source)* Say how to list what still needs doing: the currently failing tests, or the files not yet migrated. Finished pieces are skipped automatically.
+3. **How do you do one piece?** *(actor)* Usually: ask the model to fix *one* thing with a focused prompt. Handle a single piece per step so a bad attempt is cheap to throw away.
+4. **How do you check a piece really worked?** *(sensor)* A test or linter that returns a clear pass/fail with output. **Set this up before the actor**: without a check, the loop just makes mistakes faster. You may use several.
+5. **How is progress remembered?** *(state)* Use the built-in file store; just give each piece a stable name so a restart picks up where it left off instead of redoing work.
+6. **When should it stop?** *(stop rule)* When the goal is met, after *N* attempts, or at a token budget, whichever comes first. Always set at least one; a loop with no stop rule runs forever.
 
-### 8.2 Worked example: drive a test suite to green
+Questions 1, 4, and 6 are the ones you must not skip: a checkable goal, a verifier wired before the actor, and a real stop limit.
 
-The bindings become a declarative spec (abbreviated):
+### 8.2 Run one in two minutes
+
+A self-contained example ships with the framework and needs no API key. It marks a list of items done, checking each on disk:
+
+```bash
+pip install -e '.[dev]'
+onloop run examples/punchlist/punchlist.loop.yaml --workspace /tmp/demo
+# stopped: goal_met   iterations: 3   done: ['inspect', 'paint', 'wire']
+onloop resume examples/punchlist/punchlist.loop.yaml --workspace /tmp/demo  # continues
+```
+
+For a real coding task you swap in your own pieces. The same spec for "drive a failing test suite to green" looks like this; each line names the code that answers one of the six questions:
 
 ```yaml
 name: make-tests-green
-goal:        { uses: myloops.AllTestsPass, with: { cmd: "pytest -q" } }
-work_source: { uses: myloops.FailingTests }
-actor:       { uses: myloops.FixOneTest,   with: { model: <llm> } }
+goal:        { uses: myloops.AllTestsPass, with: { cmd: "pytest -q" } }   # done?
+work_source: { uses: myloops.FailingTests }                               # pieces
+actor:       { uses: myloops.FixOneTest,   with: { model: <llm> } }       # do one
 sensors:
-  - { uses: myloops.PytestSensor }
-  - { uses: myloops.RuffSensor }            # second check
+  - { uses: myloops.PytestSensor }                                        # check
 stop:
   - { uses: onloop.stops.GoalMet }
-  - { uses: onloop.stops.MaxIterations, with: { max_iters: 25 } }
-budget:    { max_tokens: 400000 }
-isolation: worktree
+  - { uses: onloop.stops.MaxIterations, with: { max_iters: 25 } }         # limit
+budget: { max_tokens: 400000 }
 ```
 
-A runtime loads the spec and executes the transition rule of §4.3: each pass finds one failing test, the actor proposes a fix, *both* sensors must pass for it to count as done, and the run halts at `goal_met`, the iteration cap, or the token budget. Because state is persisted every pass, an interrupted run resumes where it stopped (`onloop resume`).
+`onloop run` then repeats: find one failing test, let the model fix it, re-run the test, and record it, stopping at green, 25 tries, or the budget. If it is interrupted, `onloop resume` continues.
 
-### 8.3 Where a loop plugs in
+### 8.3 Map your own task
 
-The same loop integrates into different surfaces by changing only *when* it runs and *what bounds* it: a **scheduled** job (run nightly until `dry`); a **pre-merge gate** (run once; fail the build unless `goal_met`); a **batch migration** (one work item per file, with `isolation: worktree` so parallel actors do not collide); or a **supervised** run (a human-on-the-loop checkpoint every `k` iterations). The contract bindings are unchanged; only `T` and the trigger differ.
+Most jobs fit the same shape; you only change three answers (what "done" means, what one piece of work is, and how to check it).
 
-### 8.4 Pitfalls
+| Your task | Done when (goal) | One piece of work | Check that it worked (sensor) |
+|---|---|---|---|
+| Make tests pass | the test suite passes | a currently failing test | re-run that test |
+| Fix lint / format | the linter reports zero issues | a file with warnings | re-run the linter on that file |
+| Close all TODOs | no `TODO` comments remain | one `TODO` comment | the TODO is gone and tests still pass |
+| Migrate config files | every file is in the new format | one old-format file | validate the result against the new schema |
+| Upgrade a deprecated API | no calls to the old API remain | one call site | the project still compiles and tests pass |
 
-The recurring failures each violate a precondition of P1 or P2: an unverifiable goal (no check); the actor running before any sensor exists (fast, unchecked mistakes); unstable done-keys (work repeats on resume); and a missing real bound (an effectively infinite loop). The schema-level obligations of §7 catch the last two at load time.
+### 8.4 Where it runs
+
+The *same* loop fits different places by changing only when it runs and its limit: a **nightly job** that runs until nothing new is found; a **pull-request check** that runs once and blocks the merge unless the goal is met; a **one-off bulk migration** (one file per piece, run in isolated copies so parallel fixes do not clash); or a **supervised run** that pauses for a human to approve every few steps.
+
+### 8.5 Common mistakes
+
+Four mistakes account for most trouble: (i) no way to check "done" (the loop cannot tell when to stop or whether a fix worked); (ii) letting the model act before a check exists (fast, unverified changes); (iii) not giving each piece a stable name (it gets redone after a restart); and (iv) forgetting a stop limit (it never ends). The framework refuses to run a spec that has no check or no stop limit, so mistakes (i) and (iv) are caught before the loop starts.
 
 ---
 

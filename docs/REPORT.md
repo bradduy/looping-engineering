@@ -162,7 +162,20 @@ H = (Guides, Sensors, Tools, Memory, L)
 
 where **Guides** are feedforward controls applied before generation and **Sensors** are feedback controls applied after. Böckeler's central operating rule is a *meta-loop*: "whenever an issue happens multiple times, the feedforward and feedback controls should be improved." This is a second-order loop in which the *engineer* (or, prospectively, an automated guide-writer) updates `Guides` and `Sensors` in response to recurring failures.
 
-### 5.2 The loop is a subcomponent of the harness
+### 5.2 Inputs and outputs
+
+The harness has an I/O contract too, but a per-*step* one. Treating a single agent step as a function:
+
+```
+step : M × Ctx → (a, v)
+```
+
+- **Input** is the model `M` together with the *context* `Ctx` the harness assembles for this step: the relevant guides (feedforward), the available tools, retrieved memory, and the current task.
+- **Output** is a single action `a` (an edit or tool call) paired with the sensor verdict `v` on it (feedback).
+
+Harness engineering is precisely the design of what enters `Ctx` and which sensors produce `v`; it transforms raw model capability into a reliable, *checked* step. The relationship to the loop is exact: the loop's per-run signature (`run`, Sec. 4.2) is the closure of `step` iterated under the control flow of `T`. Where harness I/O asks "is this one step good?", loop I/O asks "is the whole goal met, and when do we stop?".
+
+### 5.3 The loop is a subcomponent of the harness
 
 **Proposition.** `L` is a proper subset of `H`.
 
@@ -170,7 +183,7 @@ where **Guides** are feedforward controls applied before generation and **Sensor
 
 This is the central structural claim: **loop engineering is the control-flow specialization of harness engineering.** The two are not rivals; one is a part of the other.
 
-### 5.3 Two loops, often conflated
+### 5.4 Two loops, often conflated
 
 There are two distinct cycles in play, and confusing them is a common source of error:
 

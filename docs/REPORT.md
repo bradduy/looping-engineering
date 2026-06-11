@@ -98,7 +98,21 @@ L = (G, W, A, S, M_s, T)
 | `M_s` | Memory / StateStore | `load/save/record` over a persistent `State` |
 | `T` | StopCondition(s) | `should_stop : State → Decision` |
 
-### 4.2 Execution semantics
+### 4.2 Inputs and outputs
+
+Viewed as a function, a loop has the signature
+
+```
+run : (G, W, A, S, M_s, T) × (Workspace, M, Budget) → (r, D, σ*, H, Workspace')
+       \________config________/ \______environment______/   \________outcome________/
+```
+
+- **Input** is *a goal plus the means to pursue and check it*: the objective `G` with its success predicate; the model `M` as the actor's oracle; the workspace to act on; any state `σ₀` restored from a prior run (so a loop resumes, not restarts); and the verification/termination policy (`S`, `T`, budget).
+- **Output** is *a terminated, audited outcome*: a stop reason `r`; a done-set `D` containing only items that passed their sensors (by P1); the mutated work product `Workspace'`; a replayable per-iteration trace `H`; and a final state `σ*` that is itself a valid input to the next run.
+
+The output is therefore **self-describing** (why it stopped), **verifiable** (what passed), and **resumable** (where to continue). This contrasts with harness engineering, whose I/O is per-*step*: it maps a model plus task context (guides, tools, memory) to one constrained, sensor-checked action. A loop's I/O is the closure of the harness's I/O over many steps until `T` fires.
+
+### 4.3 Execution semantics
 
 A run is the least fixed point of the transition rule applied from an initial state `σ₀` loaded from `M_s`:
 
@@ -116,7 +130,7 @@ repeat:
 
 The timestamp `τ` is supplied by the runtime, not read by any contract; this keeps a run *replayable* from its recorded trace.
 
-### 4.3 Properties
+### 4.4 Properties
 
 Two properties follow directly from the rule and are the heart of the discipline.
 
@@ -125,7 +139,7 @@ Two properties follow directly from the rule and are the heart of the discipline
 
 P1 and P2 are not automatic; they hold only if `S ≠ ∅` and `T` contains a real bound. An *engineered* loop is precisely one in which these are obligations rather than options (§7.2).
 
-### 4.4 Loop patterns as instances of `L`
+### 4.5 Loop patterns as instances of `L`
 
 Common patterns are recovered by choosing components, not by writing new control flow:
 
@@ -169,13 +183,14 @@ Loop engineering, in its strong form, is partly the project of *automating the o
 
 ## 6. Comparative Analysis
 
-We compare along nine dimensions. The summary:
+We compare along ten dimensions. The summary:
 
 | Dimension | Loop Engineering | Harness Engineering |
 |---|---|---|
 | **Primary object** | The self-running cycle that drives the agent | The full scaffolding around the model |
 | **Axis** | Temporal / control-flow (when, how often, until when) | Spatial / structural (what surrounds the model) |
 | **Unit of leverage** | The system that generates and verifies prompts | The constraints and feedback that shape output |
+| **Input → output** | Goal + model oracle + workspace + prior state → stop reason + verified done-set + mutated workspace + replayable trace | Model + task context (guides, tools, memory) → one constrained, sensor-checked action |
 | **Failure mode addressed** | Human is the bottleneck; cannot run unattended | Output is unreliable; agent does the wrong thing |
 | **Control-theory analogue** | The closed-loop controller and its stopping rule | The full plant: actuators, sensors, setpoints |
 | **Verification stance** | Verification is a stage of the cycle (`S`) | Verification is one of two control populations |

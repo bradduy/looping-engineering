@@ -141,6 +141,7 @@ CLAUDE.md                operating rules for agents working in this repo
 
 ## See also
 
+- [`docs/REPORT.md`](docs/REPORT.md) — technical report: a formal model of loop engineering and a comparison against harness engineering.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the design in full, plus what is deferred and why.
 - [`docs/PATTERNS.md`](docs/PATTERNS.md) — loop shapes, with the **Ralph loop** (`PROMPT.md` / `AGENTS.md` / `progress.md`) as the canonical reference.
 - `CLAUDE.md` — operating rules for agents working in this repo.

@@ -16,6 +16,8 @@
 \usepackage{caption}
 \usepackage{enumitem}
 \usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric}
 \usepackage[hidelinks]{hyperref}
 
 % --- CVPR-ish section styling -------------------------------------------------
@@ -53,7 +55,6 @@ Analysis of Two Disciplines for Operating Autonomous Coding Agents \par}
 \vspace{1.2em}
 {\large Duy Tran Thanh \par}
 \vspace{0.4em}
-{\normalsize OnLOOP Project \par}
 {\normalsize \texttt{duy.tran10@onemount.com} \par}
 \vspace{1.6em}
 \begin{minipage}{0.92\textwidth}
@@ -79,6 +80,61 @@ type-level obligations.
 \end{minipage}
 }]
 
+% =============================== OVERVIEW FIGURE (teaser) =====================
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize, >=Latex,
+  comp/.style={draw, rounded corners, fill=white, align=center, minimum width=1.7cm, minimum height=0.82cm, inner sep=2pt},
+  modelnode/.style={draw, fill=orange!18, rounded corners, align=center, minimum width=1.7cm, minimum height=0.9cm},
+  loopnode/.style={draw=green!55!black, very thick, fill=green!16, rounded corners, align=center, minimum width=2.0cm, minimum height=0.8cm},
+  ring/.style={draw, fill=green!8, rounded corners, align=center, minimum width=1.55cm, minimum height=0.74cm, inner sep=1.5pt},
+]
+% ---------- LEFT: the harness (spatial) ----------
+\draw[rounded corners=8pt, fill=blue!4, draw=blue!55, thick] (-0.4,-2.95) rectangle (7.3,2.35);
+\node[blue!55!black] at (3.45,1.95) {\bfseries HARNESS \textnormal{(Harness Engineering)}};
+\node[modelnode] (model)  at (3.45,0.35) {Model\\(LLM)};
+\node[comp] (guides)  at (1.25,1.05)  {Guides\\{\scriptsize feedforward}};
+\node[comp] (sensors) at (5.65,1.05)  {Sensors\\{\scriptsize feedback}};
+\node[comp] (tools)   at (1.25,-0.95) {Tools};
+\node[comp] (memory)  at (5.65,-0.95) {Memory};
+\node[loopnode] (loopbox) at (3.45,-2.05) {LOOP};
+\node[align=center] at (3.45,-2.65) {\scriptsize\itshape everything around the model: spatial / structural};
+
+% ---------- RIGHT: the loop cycle (temporal) ----------
+\def\cx{12.9}\def\cy{-0.30}
+\node[blue!55!black] at (\cx,2.15) {\bfseries LOOP \textnormal{(Loop Engineering)}};
+\node[ring] (g) at ($(\cx,\cy)+(90:1.85)$)   {Goal};
+\node[ring] (w) at ($(\cx,\cy)+(30:1.85)$)   {find\\{\scriptsize WorkSource}};
+\node[ring] (a) at ($(\cx,\cy)+(-30:1.85)$)  {act\\{\scriptsize Actor}};
+\node[ring] (s) at ($(\cx,\cy)+(-90:1.85)$)  {verify\\{\scriptsize Sensor}};
+\node[ring] (m) at ($(\cx,\cy)+(-150:1.85)$) {remember\\{\scriptsize StateStore}};
+\node[ring] (t) at ($(\cx,\cy)+(150:1.85)$)  {stop\\{\scriptsize StopCond.}};
+\node[align=center] at (\cx,\cy) {\scriptsize\itshape goal-\\driven\\cycle};
+\draw[->,thick] (g) to[bend right=12] (w);
+\draw[->,thick] (w) to[bend right=12] (a);
+\draw[->,thick] (a) to[bend right=12] (s);
+\draw[->,thick] (s) to[bend right=12] (m);
+\draw[->,thick] (m) to[bend right=12] (t);
+\draw[->,thick] (t) to[bend right=12] (g);
+\node[align=center] at (\cx,-2.65) {\scriptsize\itshape when / how often / until when: temporal / control-flow};
+
+% ---------- LINK: the loop is one component of the harness ----------
+\draw[dashed,->,thick,gray] (loopbox.east) to[out=-8,in=205]
+  node[midway,above,sloped]{\scriptsize one component, expanded} (m.west);
+\end{tikzpicture}
+\caption{\textbf{Overview: harness engineering vs.\ loop engineering.}
+\emph{Left:} the harness is everything around the model---guides (feedforward),
+sensors (feedback), tools, memory, and the loop---engineered along a
+\emph{spatial} axis (what surrounds the model). \emph{Right:} the loop is one
+component of the harness, shown expanded; loop engineering designs its
+\emph{temporal} cycle Goal\,$\to$\,find\,$\to$\,act\,$\to$\,verify\,$\to$\,
+remember\,$\to$\,stop, and owns termination. The two disciplines are a part and
+a whole, not rivals: harness engineering draws the box; loop engineering
+animates one part of it over time ($L \subsetneq H$).}
+\label{fig:overview}
+\end{figure*}
+
 % =============================== 1. INTRODUCTION =============================
 \section{Introduction}
 A coding agent is increasingly described by the decomposition
@@ -87,7 +143,7 @@ supplies intelligence and the \emph{harness} is ``everything in an AI agent
 except the model itself''~\cite{bockeler,osmaniharness}. As frontier models
 saturate single-prompt benchmarks, the marginal return on prompt-level
 optimization falls and the return on system-level design rises. Two disciplines
-name this system-level work.
+name this system-level work; Fig.~\ref{fig:overview} previews how they differ.
 
 \textbf{Loop engineering} is ``building a system that prompts your agent on a
 schedule and against a goal, instead of typing each prompt
